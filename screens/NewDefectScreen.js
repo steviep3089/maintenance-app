@@ -95,17 +95,22 @@ export default function NewDefectScreen({ navigation }) {
       const blob = await res.blob();
 
       const { error } = await supabase.storage
-        .from("defect-photos")
+        .from("repair-photos")
         .upload(fileName, blob, {
           contentType: "image/jpeg",
         });
 
-      if (!error) {
+      if (error) {
+        console.error("Upload error:", error);
+        // Skip this photo if upload fails
+      } else {
         const { data: signed } = await supabase.storage
           .from("defect-photos")
           .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
-        uploaded.push(signed.signedUrl);
+        if (signed?.signedUrl) {
+          uploaded.push(signed.signedUrl);
+        }
       }
     }
 
