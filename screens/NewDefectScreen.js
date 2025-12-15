@@ -91,26 +91,42 @@ export default function NewDefectScreen({ navigation }) {
       const uri = photos[i];
       const fileName = `${defectId}_${Date.now()}_${i}.jpg`;
 
-      const res = await fetch(uri);
-      const blob = await res.blob();
+      try {
+        const res = await fetch(uri);
+        const blob = await res.blob();
 
-      const { error } = await supabase.storage
-        .from("defect-photos")
-        .upload(fileName, blob, {
-          contentType: "image/jpeg",
-        });
-
-      if (error) {
-        console.error("Upload error:", error);
-        // Skip this photo if upload fails
-      } else {
-        const { data: signed } = await supabase.storage
-          .from("defect-photos")
-          .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-        if (signed?.signedUrl) {
-          uploaded.push(signed.signedUrl);
+        // Check if blob has content
+        if (!blob || blob.size === 0) {
+          console.error(`Blob is empty for photo ${i}, skipping`);
+          continue;
         }
+
+        console.log(`Uploading ${fileName}, size: ${blob.size} bytes`);
+
+        // Convert blob to ArrayBuffer for React Native compatibility
+        const arrayBuffer = await new Response(blob).arrayBuffer();
+        const fileData = new Uint8Array(arrayBuffer);
+
+        const { error } = await supabase.storage
+          .from("defect-photos")
+          .upload(fileName, fileData, {
+            contentType: "image/jpeg",
+          });
+
+        if (error) {
+          console.error("Upload error:", error);
+          // Skip this photo if upload fails
+        } else {
+          const { data: signed } = await supabase.storage
+            .from("defect-photos")
+            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+
+          if (signed?.signedUrl) {
+            uploaded.push(signed.signedUrl);
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to upload photo ${i}:`, err);
       }
     }
 

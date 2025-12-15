@@ -22,7 +22,7 @@ const STATUS_STYLES = {
   Completed: { color: "#28a745", text: "Completed" },
 };
 
-export default function DefectDetailsScreen({ route }) {
+export default function DefectDetailsScreen({ route, navigation }) {
   const { defect } = route.params;
 
   const [currentDefect, setCurrentDefect] = useState(defect);
@@ -154,24 +154,40 @@ export default function DefectDetailsScreen({ route }) {
       const uri = repairPhotos[i];
       const fileName = `${defectId}_repair_${Date.now()}_${i}.jpg`;
 
-      const res = await fetch(uri);
-      const blob = await res.blob();
+      try {
+        const res = await fetch(uri);
+        const blob = await res.blob();
 
-      const { error } = await supabase.storage
-        .from("repair-photos")
-        .upload(fileName, blob, { contentType: "image/jpeg" });
-
-      if (error) {
-        console.error("Repair photo upload error:", error);
-        // Skip this photo if upload fails
-      } else {
-        const { data: signed } = await supabase.storage
-          .from("repair-photos")
-          .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-        if (signed?.signedUrl) {
-          uploaded.push(signed.signedUrl);
+        // Check if blob has content
+        if (!blob || blob.size === 0) {
+          console.error(`Repair photo blob is empty for photo ${i}, skipping`);
+          continue;
         }
+
+        console.log(`Uploading repair photo ${fileName}, size: ${blob.size} bytes`);
+
+        // Convert blob to ArrayBuffer for React Native compatibility
+        const arrayBuffer = await new Response(blob).arrayBuffer();
+        const fileData = new Uint8Array(arrayBuffer);
+
+        const { error } = await supabase.storage
+          .from("repair-photos")
+          .upload(fileName, fileData, { contentType: "image/jpeg" });
+
+        if (error) {
+          console.error("Repair photo upload error:", error);
+          // Skip this photo if upload fails
+        } else {
+          const { data: signed } = await supabase.storage
+            .from("repair-photos")
+            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
+
+          if (signed?.signedUrl) {
+            uploaded.push(signed.signedUrl);
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to upload repair photo ${i}:`, err);
       }
     }
 
@@ -190,14 +206,17 @@ export default function DefectDetailsScreen({ route }) {
       uploadedRepairUrls = await uploadRepairPhotos(currentDefect.id);
     }
 
+    // Merge existing repair photos with new ones
+    const existingRepairPhotos = Array.isArray(currentDefect.repair_photos) 
+      ? currentDefect.repair_photos 
+      : [];
+    const allRepairPhotos = [...existingRepairPhotos, ...uploadedRepairUrls];
+
     const updates = {
       status: localStatus,
       actions_taken: actionsTaken,
       repair_company: repairCompany,
-      repair_photos:
-        uploadedRepairUrls.length > 0
-          ? uploadedRepairUrls
-          : currentDefect.repair_photos,
+      repair_photos: allRepairPhotos,
       locked: finalLocked,
     };
 
@@ -217,9 +236,13 @@ export default function DefectDetailsScreen({ route }) {
     // Single log entry WHEN we save
     await logActivity(`Status saved as "${localStatus}"`);
 
-    Alert.alert("Success", "Defect updated.");
-    await loadDefect(true);
     setLoading(false);
+    Alert.alert("Success", "Defect updated.", [
+      {
+        text: "OK",
+        onPress: () => navigation.goBack()
+      }
+    ]);
   }
 
   const statusStyle = STATUS_STYLES[localStatus] || STATUS_STYLES.Reported;
