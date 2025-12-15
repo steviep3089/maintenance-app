@@ -95,7 +95,7 @@ export default function NewDefectScreen({ navigation }) {
       const blob = await res.blob();
 
       const { error } = await supabase.storage
-        .from("repair-photos")
+        .from("defect-photos")
         .upload(fileName, blob, {
           contentType: "image/jpeg",
         });
