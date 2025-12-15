@@ -161,12 +161,17 @@ export default function DefectDetailsScreen({ route }) {
         .from("repair-photos")
         .upload(fileName, blob, { contentType: "image/jpeg" });
 
-      if (!error) {
+      if (error) {
+        console.error("Repair photo upload error:", error);
+        // Skip this photo if upload fails
+      } else {
         const { data: signed } = await supabase.storage
           .from("repair-photos")
           .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
-        uploaded.push(signed.signedUrl);
+        if (signed?.signedUrl) {
+          uploaded.push(signed.signedUrl);
+        }
       }
     }
 
