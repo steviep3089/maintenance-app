@@ -45,6 +45,9 @@ export default function HomeScreen({ navigation }) {
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
+
+      {/* VERSION */}
+      <Text style={styles.versionText}>v1.1</Text>
     </View>
   );
 }
@@ -109,5 +112,11 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 18,
     fontWeight: "600",
+  },
+  versionText: {
+    position: "absolute",
+    bottom: 20,
+    color: "#999",
+    fontSize: 12,
   },
 });
