@@ -212,12 +212,18 @@ export default function DefectDetailsScreen({ route, navigation }) {
       : [];
     const allRepairPhotos = [...existingRepairPhotos, ...uploadedRepairUrls];
 
+    // Set closed_out timestamp when completing
+    const closedOut = finalLocked && !currentDefect.closed_out 
+      ? new Date().toISOString() 
+      : currentDefect.closed_out;
+
     const updates = {
       status: localStatus,
       actions_taken: actionsTaken,
       repair_company: repairCompany,
       repair_photos: allRepairPhotos,
       locked: finalLocked,
+      closed_out: closedOut,
     };
 
     const { error } = await supabase
