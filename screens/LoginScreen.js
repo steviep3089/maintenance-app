@@ -134,13 +134,10 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
 
-        {/* Create Account */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate("SignUp")}
-          style={{ marginTop: 15 }}
-        >
-          <Text style={styles.signupText}>Create an Account</Text>
-        </TouchableOpacity>
+        {/* Contact admin message */}
+        <Text style={styles.contactText}>
+          Need an account? Contact your administrator.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -223,10 +220,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  signupText: {
-    marginTop: 10,
-    color: "#007aff",
+  contactText: {
+    marginTop: 20,
+    color: "#666",
     textAlign: "center",
-    fontSize: 16,
+    fontSize: 14,
   },
 });
