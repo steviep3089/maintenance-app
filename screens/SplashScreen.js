@@ -8,6 +8,8 @@ import {
   Easing,
   Image,
 } from "react-native";
+import { supabase } from "../supabase";
+import * as Linking from 'expo-linking';
 
 export default function SplashScreen({ navigation }) {
   // Animated value for spin
@@ -26,14 +28,64 @@ export default function SplashScreen({ navigation }) {
 
     spinLoop.start();
 
-    // After 2 seconds, go to Login (or Home, up to you)
-    const timer = setTimeout(() => {
-      navigation.replace("Login"); // change to "Home" if you prefer
-    }, 2000);
+    // Check for password recovery
+    const checkSession = async () => {
+      // First check if URL contains recovery token
+      const url = await Linking.getInitialURL();
+      console.log('Splash screen initial URL:', url);
+      
+      if (url?.includes('access_token') || url?.includes('type=recovery')) {
+        console.log('Recovery URL detected, extracting tokens...');
+        
+        // Extract tokens from URL hash/query
+        const urlParts = url.split('#')[1] || url.split('?')[1] || '';
+        const params = new URLSearchParams(urlParts);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        
+        console.log('Tokens found:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
+        
+        if (accessToken && refreshToken) {
+          // Manually set the session with the tokens from URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error('Error setting session:', error);
+          } else {
+            console.log('Session set successfully, navigating to reset');
+            navigation.replace("ResetPassword");
+            return;
+          }
+        } else {
+          console.log('No tokens in URL, token may be expired');
+        }
+      }
+
+      // Check session for recovery mode
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user) {
+        console.log('Session found:', session.user.email);
+        if (session.user.recovery_sent_at) {
+          console.log('Recovery session detected');
+          navigation.replace("ResetPassword");
+          return;
+        }
+      }
+      
+      // Normal flow
+      setTimeout(() => {
+        navigation.replace("Login");
+      }, 2000);
+    };
+
+    checkSession();
 
     return () => {
       spinLoop.stop();
-      clearTimeout(timer);
     };
   }, [navigation, spinValue]);
 

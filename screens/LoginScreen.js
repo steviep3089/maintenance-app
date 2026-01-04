@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  BackHandler,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../supabase";
@@ -29,7 +31,51 @@ export default function LoginScreen({ navigation }) {
     }).start();
 
     loadRememberedLogin();
+    checkForRecovery();
   }, []);
+
+  async function checkForRecovery() {
+    // Check if there's a recovery session immediately
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      console.log('Session found on login:', session);
+      console.log('User meta:', session.user);
+      
+      // Check if this is a recovery token by looking at session metadata
+      // Recovery sessions have different properties
+      const isRecovery = session.user.aud === 'authenticated' && 
+                        session.user.recovery_sent_at;
+      
+      if (isRecovery) {
+        console.log('Recovery session detected - navigating to reset');
+        navigation.replace('ResetPassword');
+        return;
+      }
+      
+      // Also check if user just came from email verification
+      // If they have a session but we're on login screen, check if it's recent
+      const sessionAge = Date.now() - new Date(session.user.last_sign_in_at || 0).getTime();
+      if (sessionAge < 10000) { // Less than 10 seconds old
+        console.log('Recent session detected - might be recovery');
+        navigation.replace('ResetPassword');
+        return;
+      }
+    }
+    
+    // Subscribe to future auth changes
+    const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('Auth event on login screen:', event);
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('PASSWORD_RECOVERY event - navigating');
+        navigation.replace('ResetPassword');
+      }
+    });
+    
+    return () => {
+      data?.subscription?.unsubscribe();
+    };
+  }
 
   async function loadRememberedLogin() {
     const savedEmail = await AsyncStorage.getItem("savedEmail");
@@ -73,11 +119,28 @@ export default function LoginScreen({ navigation }) {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://your-app-url/reset", // optional
+      redirectTo: "maintenanceapp://",
     });
 
-    if (error) alert(error.message);
-    else alert("Password reset email sent.");
+    if (error) {
+      alert(error.message);
+    } else {
+      Alert.alert(
+        "Email Sent",
+        "Password reset email sent. Check your email and click the link. The app will now close.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Close the app so it starts fresh when email link is clicked
+              if (Platform.OS === 'android') {
+                BackHandler.exitApp();
+              }
+            }
+          }
+        ]
+      );
+    }
   }
 
   return (

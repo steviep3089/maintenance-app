@@ -10,12 +10,15 @@ export default function SignUpScreen({ navigation }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: 'maintenanceapp://login',
+      },
     });
 
     if (error) {
       alert(error.message);
     } else {
-      alert("Account created! Please verify your email.");
+      alert("Account created! Please check your email to verify.");
       navigation.replace("Login");
     }
   }
