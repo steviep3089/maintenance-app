@@ -47,7 +47,7 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
 
       {/* VERSION */}
-      <Text style={styles.versionText}>v2.0</Text>
+      <Text style={styles.versionText}>v2.1</Text>
     </View>
   );
 }
