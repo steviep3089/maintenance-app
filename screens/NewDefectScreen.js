@@ -10,6 +10,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
@@ -56,6 +57,7 @@ export default function NewDefectScreen({ navigation }) {
   const [priority, setPriority] = useState("");
   const [category, setCategory] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // PICK FROM GALLERY
   async function pickPhoto() {
@@ -135,50 +137,64 @@ export default function NewDefectScreen({ navigation }) {
 
   // SUBMIT DEFECT
   async function submitDefect() {
+    if (submitting) return; // Prevent duplicate submissions
+    
     if (!asset) return alert("Please select an asset.");
     if (!title.trim()) return alert("Please enter a title.");
     if (!description.trim()) return alert("Please enter a description.");
     if (!priority) return alert("Please select a priority.");
     if (!category) return alert("Please select a category.");
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    setSubmitting(true);
 
-    // 1. INSERT DEFECT WITH status="Reported"
-    const { data, error } = await supabase
-      .from("defects")
-      .insert([
-        {
-          asset,
-          title,
-          description,
-          priority: Number(priority),
-          category,
-          submitted_by: user?.email ?? "Unknown",
-          created_by: user?.id ?? null,
-          status: "Reported", // always red to start
-        },
-      ])
-      .select()
-      .single();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (error) return alert(error.message);
-
-    const defectId = data.id;
-
-    // 2. UPLOAD PHOTOS IF ANY
-    if (photos.length > 0) {
-      const urls = await uploadPhotos(defectId);
-
-      await supabase
+      // 1. INSERT DEFECT WITH status="Reported"
+      const { data, error } = await supabase
         .from("defects")
-        .update({ photo_urls: urls })
-        .eq("id", defectId);
-    }
+        .insert([
+          {
+            asset,
+            title,
+            description,
+            priority: Number(priority),
+            category,
+            submitted_by: user?.email ?? "Unknown",
+            created_by: user?.id ?? null,
+            status: "Reported", // always red to start
+          },
+        ])
+        .select()
+        .single();
 
-    alert("Defect submitted!");
-    navigation.goBack();
+      if (error) {
+        alert(error.message);
+        setSubmitting(false);
+        return;
+      }
+
+      const defectId = data.id;
+
+      // 2. UPLOAD PHOTOS IF ANY
+      if (photos.length > 0) {
+        const urls = await uploadPhotos(defectId);
+
+        await supabase
+          .from("defects")
+          .update({ photo_urls: urls })
+          .eq("id", defectId);
+      }
+
+      alert("Defect submitted!");
+      navigation.goBack();
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("Failed to submit defect. Please try again.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -287,7 +303,14 @@ export default function NewDefectScreen({ navigation }) {
         </View>
 
         {/* SUBMIT BUTTON */}
-        <Button title="Submit Defect" onPress={submitDefect} />
+        {submitting ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007aff" />
+            <Text style={styles.loadingText}>Submitting defect...</Text>
+          </View>
+        ) : (
+          <Button title="Submit Defect" onPress={submitDefect} disabled={submitting} />
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -298,6 +321,15 @@ export default function NewDefectScreen({ navigation }) {
 // ---------------------------
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 100 },
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
 
   header: {
     fontSize: 28,
