@@ -15,6 +15,8 @@ import { supabase } from "../supabase";
 export default function ResetPasswordScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
 
@@ -86,21 +88,39 @@ export default function ResetPasswordScreen({ navigation }) {
       <View style={styles.container}>
         <Text style={styles.title}>Reset Password</Text>
 
-        <TextInput
-          placeholder="New Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-        />
+        <View style={styles.passwordRow}>
+          <TextInput
+            placeholder="New Password"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+            style={[styles.input, styles.passwordInput]}
+          />
+          <TouchableWithoutFeedback onPress={() => setShowPassword((prev) => !prev)}>
+            <View style={styles.passwordToggle}>
+              <Text style={styles.passwordToggleText}>
+                {showPassword ? "Hide" : "Show"}
+              </Text>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
 
-        <TextInput
-          placeholder="Confirm Password"
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          style={styles.input}
-        />
+        <View style={styles.passwordRow}>
+          <TextInput
+            placeholder="Confirm Password"
+            secureTextEntry={!showConfirm}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            style={[styles.input, styles.passwordInput]}
+          />
+          <TouchableWithoutFeedback onPress={() => setShowConfirm((prev) => !prev)}>
+            <View style={styles.passwordToggle}>
+              <Text style={styles.passwordToggleText}>
+                {showConfirm ? "Hide" : "Show"}
+              </Text>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
 
         <Button title="Reset Password" onPress={handleResetPassword} />
       </View>
@@ -125,5 +145,23 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 5,
     marginBottom: 10,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  passwordToggle: {
+    marginLeft: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  passwordToggleText: {
+    color: "#007aff",
+    fontSize: 14,
   },
 });

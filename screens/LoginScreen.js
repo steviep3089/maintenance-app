@@ -20,6 +20,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
@@ -177,13 +178,23 @@ export default function LoginScreen({ navigation }) {
         />
 
         {/* Password */}
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-        />
+        <View style={styles.passwordRow}>
+          <TextInput
+            placeholder="Password"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+            style={[styles.input, styles.passwordInput]}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            style={styles.passwordToggle}
+          >
+            <Text style={styles.passwordToggleText}>
+              {showPassword ? "Hide" : "Show"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Remember Me */}
         <TouchableOpacity
@@ -208,6 +219,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.contactText}>
           Need an account? Contact your administrator.
         </Text>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -242,6 +254,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     fontSize: 16,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  passwordToggle: {
+    marginLeft: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  passwordToggleText: {
+    color: "#007aff",
+    fontSize: 14,
   },
 
   rememberRow: {
