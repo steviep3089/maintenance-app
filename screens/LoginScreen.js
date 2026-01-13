@@ -120,6 +120,18 @@ export default function LoginScreen({ navigation }) {
     }
   }
 
+  async function checkInviteSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.recovery_sent_at || session?.user?.invited_at) {
+      navigation.replace("ResetPassword");
+      return;
+    }
+    Alert.alert(
+      "No invite session",
+      "Please open the invite link from your email, then try again."
+    );
+  }
+
   async function forgotPassword() {
     if (!email.trim()) {
       alert("Enter your email first.");
@@ -208,6 +220,11 @@ export default function LoginScreen({ navigation }) {
         {/* Forgot Password */}
         <TouchableOpacity onPress={forgotPassword}>
           <Text style={styles.forgotText}>Forgot password?</Text>
+        </TouchableOpacity>
+
+        {/* Invite Link Help */}
+        <TouchableOpacity style={styles.secondaryButton} onPress={checkInviteSession}>
+          <Text style={styles.secondaryButtonText}>I have an invite link</Text>
         </TouchableOpacity>
 
         {/* Sign In */}
@@ -317,6 +334,18 @@ const styles = StyleSheet.create({
     color: "white",
     textAlign: "center",
     fontSize: 18,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: "#e5e7eb",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  secondaryButtonText: {
+    color: "#111827",
+    textAlign: "center",
+    fontSize: 16,
     fontWeight: "600",
   },
 
