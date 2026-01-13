@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from "react-native";
 import { supabase } from "../supabase";
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function signUp() {
     const { error } = await supabase.auth.signUp({
@@ -34,13 +35,23 @@ export default function SignUpScreen({ navigation }) {
         style={styles.input}
       />
 
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
+      <View style={styles.passwordRow}>
+        <TextInput
+          placeholder="Password"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+          style={[styles.input, styles.passwordInput]}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword((prev) => !prev)}
+          style={styles.passwordToggle}
+        >
+          <Text style={styles.passwordToggleText}>
+            {showPassword ? "Hide" : "Show"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <Button title="Sign Up" onPress={signUp} />
 
@@ -71,5 +82,23 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 5,
     marginBottom: 10,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  passwordToggle: {
+    marginLeft: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  passwordToggleText: {
+    color: "#007aff",
+    fontSize: 14,
   },
 });
