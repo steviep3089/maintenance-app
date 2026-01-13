@@ -30,12 +30,22 @@ export default function App() {
   const navigationRef = useRef();
 
   useEffect(() => {
+    const isInviteOrSignup = (url) =>
+      url?.includes("type=invite") ||
+      url?.includes("type=signup") ||
+      url?.includes("from=invite") ||
+      url?.includes("from=signup");
+
     // Check if app was opened with a recovery link
     const checkInitialURL = async () => {
       const url = await Linking.getInitialURL();
       console.log('Initial URL:', url);
       
-      if (url?.includes('type=recovery') || url?.includes('reset')) {
+      if (
+        url?.includes('type=recovery') ||
+        url?.includes('reset') ||
+        isInviteOrSignup(url)
+      ) {
         console.log('Recovery URL detected on app launch');
         // Small delay to ensure navigation is ready
         setTimeout(() => {
@@ -55,6 +65,16 @@ export default function App() {
       if (event === 'PASSWORD_RECOVERY') {
         console.log('Password recovery detected - navigating to reset');
         // Navigate to reset password screen with delay for navigation readiness
+        setTimeout(() => {
+          if (navigationRef.current?.isReady()) {
+            navigationRef.current.navigate('ResetPassword');
+          }
+        }, 100);
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && session?.user?.invited_at) {
+        console.log('Invite sign-in detected - navigating to reset');
         setTimeout(() => {
           if (navigationRef.current?.isReady()) {
             navigationRef.current.navigate('ResetPassword');

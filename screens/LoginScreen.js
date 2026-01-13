@@ -44,8 +44,9 @@ export default function LoginScreen({ navigation }) {
       
       // Check if this is a recovery token by looking at session metadata
       // Recovery sessions have different properties
-      const isRecovery = session.user.aud === 'authenticated' && 
-                        session.user.recovery_sent_at;
+      const isRecovery =
+        session.user.aud === 'authenticated' &&
+        (session.user.recovery_sent_at || session.user.invited_at);
       
       if (isRecovery) {
         console.log('Recovery session detected - navigating to reset');
@@ -68,6 +69,12 @@ export default function LoginScreen({ navigation }) {
       console.log('Auth event on login screen:', event);
       if (event === 'PASSWORD_RECOVERY') {
         console.log('PASSWORD_RECOVERY event - navigating');
+        navigation.replace('ResetPassword');
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && newSession?.user?.invited_at) {
+        console.log('Invite sign-in detected - navigating');
         navigation.replace('ResetPassword');
       }
     });

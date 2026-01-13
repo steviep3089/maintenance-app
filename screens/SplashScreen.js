@@ -34,7 +34,14 @@ export default function SplashScreen({ navigation }) {
       const url = await Linking.getInitialURL();
       console.log('Splash screen initial URL:', url);
       
-      if (url?.includes('access_token') || url?.includes('type=recovery')) {
+      if (
+        url?.includes('access_token') ||
+        url?.includes('type=recovery') ||
+        url?.includes('type=invite') ||
+        url?.includes('type=signup') ||
+        url?.includes('from=invite') ||
+        url?.includes('from=signup')
+      ) {
         console.log('Recovery URL detected, extracting tokens...');
         
         // Extract tokens from URL hash/query
@@ -69,8 +76,8 @@ export default function SplashScreen({ navigation }) {
       
       if (session && session.user) {
         console.log('Session found:', session.user.email);
-        if (session.user.recovery_sent_at) {
-          console.log('Recovery session detected');
+        if (session.user.recovery_sent_at || session.user.invited_at) {
+          console.log('Recovery/invite session detected');
           navigation.replace("ResetPassword");
           return;
         }

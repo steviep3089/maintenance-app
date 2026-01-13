@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from "react-native";
 import { supabase } from "../supabase";
 
 export default function ResetPasswordScreen({ navigation }) {
@@ -41,7 +51,10 @@ export default function ResetPasswordScreen({ navigation }) {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({
+      password,
+      data: { password_set: true },
+    });
 
     if (error) {
       Alert.alert("Error", error.message);
@@ -69,27 +82,29 @@ export default function ResetPasswordScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Reset Password</Text>
 
-      <TextInput
-        placeholder="New Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="New Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          style={styles.input}
+        />
 
-      <TextInput
-        placeholder="Confirm Password"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Confirm Password"
+          secureTextEntry
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          style={styles.input}
+        />
 
-      <Button title="Reset Password" onPress={handleResetPassword} />
-    </View>
+        <Button title="Reset Password" onPress={handleResetPassword} />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
