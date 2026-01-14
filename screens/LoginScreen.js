@@ -12,7 +12,6 @@ import {
   ScrollView,
   BackHandler,
   Alert,
-  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../supabase";
@@ -22,9 +21,6 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showInviteInput, setShowInviteInput] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
-  const [inviteSubmitting, setInviteSubmitting] = useState(false);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
@@ -130,42 +126,10 @@ export default function LoginScreen({ navigation }) {
       navigation.replace("ResetPassword");
       return;
     }
-    setShowInviteInput((prev) => !prev);
-  }
-
-  async function handleInviteLinkSubmit() {
-    const trimmed = inviteLink.trim();
-    if (!trimmed) {
-      Alert.alert("Invite link required", "Paste the invite link from your email.");
-      return;
-    }
-
-    let url;
-    try {
-      url = new URL(trimmed);
-    } catch (error) {
-      Alert.alert("Invalid link", "Please paste the full invite link from the email.");
-      return;
-    }
-
-    setInviteSubmitting(true);
-    try {
-      const canOpen = await Linking.canOpenURL(url.toString());
-      if (!canOpen) {
-        Alert.alert(
-          "Cannot open link",
-          "Try opening the link in Safari or Chrome, then return to the app."
-        );
-        return;
-      }
-      await Linking.openURL(url.toString());
-      Alert.alert(
-        "Opening invite link",
-        "If nothing happens, open the link in Safari and try again."
-      );
-    } finally {
-      setInviteSubmitting(false);
-    }
+    Alert.alert(
+      "No invite session",
+      "Please open the invite link from your email, then try again."
+    );
   }
 
   async function forgotPassword() {
@@ -262,27 +226,6 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity style={styles.secondaryButton} onPress={checkInviteSession}>
           <Text style={styles.secondaryButtonText}>I have an invite link</Text>
         </TouchableOpacity>
-        {showInviteInput && (
-          <View style={styles.inviteBox}>
-            <TextInput
-              placeholder="Paste invite link from email"
-              value={inviteLink}
-              onChangeText={setInviteLink}
-              style={styles.inviteInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity
-              style={[styles.inviteButton, inviteSubmitting && styles.inviteButtonDisabled]}
-              onPress={handleInviteLinkSubmit}
-              disabled={inviteSubmitting}
-            >
-              <Text style={styles.inviteButtonText}>
-                {inviteSubmitting ? "Opening..." : "Open Invite Link"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* Sign In */}
         <TouchableOpacity style={styles.button} onPress={signIn}>
@@ -403,31 +346,6 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
     fontSize: 16,
-    fontWeight: "600",
-  },
-  inviteBox: {
-    marginBottom: 12,
-  },
-  inviteInput: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    marginBottom: 10,
-    fontSize: 14,
-  },
-  inviteButton: {
-    backgroundColor: "#111827",
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  inviteButtonDisabled: {
-    opacity: 0.6,
-  },
-  inviteButtonText: {
-    color: "white",
-    textAlign: "center",
-    fontSize: 15,
     fontWeight: "600",
   },
 
