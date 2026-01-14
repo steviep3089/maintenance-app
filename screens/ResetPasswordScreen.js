@@ -55,7 +55,7 @@ export default function ResetPasswordScreen({ navigation }) {
 
     const { error } = await supabase.auth.updateUser({
       password,
-      data: { password_set: true },
+      data: { password_set: true, invited: false },
     });
 
     if (error) {

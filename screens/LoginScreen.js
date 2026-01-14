@@ -58,14 +58,6 @@ export default function LoginScreen({ navigation }) {
         return;
       }
       
-      // Also check if user just came from email verification
-      // If they have a session but we're on login screen, check if it's recent
-      const sessionAge = Date.now() - new Date(session.user.last_sign_in_at || 0).getTime();
-      if (sessionAge < 10000) { // Less than 10 seconds old
-        console.log('Recent session detected - might be recovery');
-        navigation.replace('ResetPassword');
-        return;
-      }
     }
     
     // Subscribe to future auth changes

@@ -74,12 +74,20 @@ export default function App() {
       }
 
       if (event === 'SIGNED_IN' && session?.user?.invited_at) {
-        console.log('Invite sign-in detected - navigating to reset');
-        setTimeout(() => {
-          if (navigationRef.current?.isReady()) {
-            navigationRef.current.navigate('ResetPassword');
+        supabase.auth.getUser().then(({ data }) => {
+          const needsReset =
+            data?.user?.user_metadata?.password_set !== true &&
+            data?.user?.invited_at;
+          if (!needsReset) {
+            return;
           }
-        }, 100);
+          console.log('Invite sign-in detected - navigating to reset');
+          setTimeout(() => {
+            if (navigationRef.current?.isReady()) {
+              navigationRef.current.navigate('ResetPassword');
+            }
+          }, 100);
+        });
       }
     });
 
