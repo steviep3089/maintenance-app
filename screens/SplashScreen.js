@@ -76,7 +76,10 @@ export default function SplashScreen({ navigation }) {
       
       if (session && session.user) {
         console.log('Session found:', session.user.email);
-        if (session.user.recovery_sent_at || session.user.invited_at) {
+        const needsReset =
+          session.user.recovery_sent_at ||
+          (session.user.invited_at && session.user.user_metadata?.password_set !== true);
+        if (needsReset) {
           console.log('Recovery/invite session detected');
           navigation.replace("ResetPassword");
           return;

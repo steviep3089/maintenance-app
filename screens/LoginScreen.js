@@ -47,7 +47,8 @@ export default function LoginScreen({ navigation }) {
       // Recovery sessions have different properties
       const isRecovery =
         session.user.aud === 'authenticated' &&
-        (session.user.recovery_sent_at || session.user.invited_at);
+        (session.user.recovery_sent_at ||
+          (session.user.invited_at && session.user.user_metadata?.password_set !== true));
       
       if (isRecovery) {
         console.log('Recovery session detected - navigating to reset');
@@ -74,7 +75,11 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      if (event === 'SIGNED_IN' && newSession?.user?.invited_at) {
+      if (
+        event === 'SIGNED_IN' &&
+        newSession?.user?.invited_at &&
+        newSession?.user?.user_metadata?.password_set !== true
+      ) {
         console.log('Invite sign-in detected - navigating');
         navigation.replace('ResetPassword');
       }
