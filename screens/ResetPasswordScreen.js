@@ -19,7 +19,6 @@ export default function ResetPasswordScreen({ navigation }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     checkSession();
@@ -44,7 +43,6 @@ export default function ResetPasswordScreen({ navigation }) {
   }
 
   async function handleResetPassword() {
-    if (submitting) return;
     if (!password || !confirmPassword) {
       Alert.alert("Error", "Please fill in both password fields");
       return;
@@ -55,19 +53,15 @@ export default function ResetPasswordScreen({ navigation }) {
       return;
     }
 
-    setSubmitting(true);
     const { error } = await supabase.auth.updateUser({
       password,
       data: { password_set: true },
     });
 
     if (error) {
-      setSubmitting(false);
       Alert.alert("Error", error.message);
     } else {
-      await supabase.auth.signOut();
-      setSubmitting(false);
-      Alert.alert("Success", "Password updated successfully. Please sign in.", [
+      Alert.alert("Success", "Password updated successfully", [
         {
           text: "OK",
           onPress: () => navigation.replace("Login"),
@@ -128,11 +122,7 @@ export default function ResetPasswordScreen({ navigation }) {
           </TouchableWithoutFeedback>
         </View>
 
-        <Button
-          title={submitting ? "Updating..." : "Reset Password"}
-          onPress={handleResetPassword}
-          disabled={submitting}
-        />
+        <Button title="Reset Password" onPress={handleResetPassword} />
       </View>
     </TouchableWithoutFeedback>
   );
