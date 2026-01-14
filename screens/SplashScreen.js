@@ -73,12 +73,14 @@ export default function SplashScreen({ navigation }) {
 
       // Check session for recovery mode
       const { data: { session } } = await supabase.auth.getSession();
+      const { data: userData } = await supabase.auth.getUser();
       
       if (session && session.user) {
-        console.log('Session found:', session.user.email);
+        const currentUser = userData?.user || session.user;
+        console.log('Session found:', currentUser.email);
         const needsReset =
-          session.user.recovery_sent_at ||
-          (session.user.invited_at && session.user.user_metadata?.password_set !== true);
+          currentUser.recovery_sent_at ||
+          (currentUser.invited_at && currentUser.user_metadata?.password_set !== true);
         if (needsReset) {
           console.log('Recovery/invite session detected');
           navigation.replace("ResetPassword");

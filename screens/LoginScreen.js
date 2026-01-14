@@ -38,17 +38,19 @@ export default function LoginScreen({ navigation }) {
   async function checkForRecovery() {
     // Check if there's a recovery session immediately
     const { data: { session } } = await supabase.auth.getSession();
+    const { data: userData } = await supabase.auth.getUser();
     
     if (session?.user) {
+      const currentUser = userData?.user || session.user;
       console.log('Session found on login:', session);
-      console.log('User meta:', session.user);
+      console.log('User meta:', currentUser);
       
       // Check if this is a recovery token by looking at session metadata
       // Recovery sessions have different properties
       const isRecovery =
-        session.user.aud === 'authenticated' &&
-        (session.user.recovery_sent_at ||
-          (session.user.invited_at && session.user.user_metadata?.password_set !== true));
+        currentUser.aud === 'authenticated' &&
+        (currentUser.recovery_sent_at ||
+          (currentUser.invited_at && currentUser.user_metadata?.password_set !== true));
       
       if (isRecovery) {
         console.log('Recovery session detected - navigating to reset');
@@ -77,11 +79,14 @@ export default function LoginScreen({ navigation }) {
 
       if (
         event === 'SIGNED_IN' &&
-        newSession?.user?.invited_at &&
-        newSession?.user?.user_metadata?.password_set !== true
+        newSession?.user?.invited_at
       ) {
-        console.log('Invite sign-in detected - navigating');
-        navigation.replace('ResetPassword');
+        supabase.auth.getUser().then(({ data }) => {
+          if (data?.user?.user_metadata?.password_set !== true) {
+            console.log('Invite sign-in detected - navigating');
+            navigation.replace('ResetPassword');
+          }
+        });
       }
     });
     
