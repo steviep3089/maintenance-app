@@ -10,6 +10,7 @@ import {
   TextInput,
   Button,
   Alert,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../supabase";
@@ -118,7 +119,7 @@ export default function DefectDetailsScreen({ route, navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS === "ios",
       quality: 0.7,
     });
 
@@ -136,7 +137,7 @@ export default function DefectDetailsScreen({ route, navigation }) {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS === "ios",
       quality: 0.7,
     });
 
@@ -239,8 +240,47 @@ export default function DefectDetailsScreen({ route, navigation }) {
 
     setLocked(finalLocked);
 
+    const previousStatus = currentDefect.status || "Reported";
+    const nextActions = (actionsTaken || "").trim();
+    const previousActions = (currentDefect.actions_taken || "").trim();
+    const previousRepairCompany = currentDefect.repair_company || "";
+    const nextRepairCompany = repairCompany || "";
+    const updateMessages = [];
+
+    if (localStatus !== previousStatus) {
+      updateMessages.push(
+        `Status changed from "${previousStatus}" to "${localStatus}"`
+      );
+    }
+    if (nextActions !== previousActions) {
+      if (nextActions) {
+        updateMessages.push(`Actions updated: ${nextActions}`);
+      } else {
+        updateMessages.push("Actions cleared");
+      }
+    }
+    if (nextRepairCompany !== previousRepairCompany) {
+      if (nextRepairCompany) {
+        updateMessages.push(`Repair company set to "${nextRepairCompany}"`);
+      } else {
+        updateMessages.push("Repair company cleared");
+      }
+    }
+    if (uploadedRepairUrls.length > 0) {
+      updateMessages.push(
+        `Added ${uploadedRepairUrls.length} repair photo${
+          uploadedRepairUrls.length > 1 ? "s" : ""
+        }`
+      );
+    }
+
+    const message =
+      updateMessages.length > 0
+        ? updateMessages.join("; ")
+        : "Defect saved via Mobile App";
+
     // Single log entry WHEN we save
-    await logActivity(`Status saved as "${localStatus}"`);
+    await logActivity(message);
 
     setLoading(false);
     Alert.alert("Success", "Defect updated.", [

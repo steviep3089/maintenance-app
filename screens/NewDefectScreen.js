@@ -65,7 +65,7 @@ export default function NewDefectScreen({ navigation }) {
     if (!permission.granted) return alert("Gallery permission required.");
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS === "ios",
       quality: 0.7,
     });
 
@@ -78,7 +78,7 @@ export default function NewDefectScreen({ navigation }) {
     if (!permission.granted) return alert("Camera permission required.");
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: Platform.OS === "ios",
       quality: 0.7,
     });
 
@@ -178,14 +178,46 @@ export default function NewDefectScreen({ navigation }) {
 
       const defectId = data.id;
 
+      let uploadedUrls = [];
       // 2. UPLOAD PHOTOS IF ANY
       if (photos.length > 0) {
-        const urls = await uploadPhotos(defectId);
+        uploadedUrls = await uploadPhotos(defectId);
 
         await supabase
           .from("defects")
-          .update({ photo_urls: urls })
+          .update({ photo_urls: uploadedUrls })
           .eq("id", defectId);
+      }
+
+      // 3. LOG ACTIVITY
+      try {
+        const detailParts = [
+          `New defect created`,
+          `Status set to "Reported"`,
+          `Priority set to "${priority}"`,
+          `Category set to "${category}"`,
+        ];
+        if (uploadedUrls.length > 0) {
+          detailParts.push(
+            `Added ${uploadedUrls.length} defect photo${
+              uploadedUrls.length > 1 ? "s" : ""
+            }`
+          );
+        }
+
+        const { error: logError } = await supabase
+          .from("defect_activity")
+          .insert({
+            defect_id: defectId,
+            message: detailParts.join("; "),
+            performed_by: user?.email ?? "Unknown",
+          });
+
+        if (logError) {
+          console.log("logActivity error:", logError.message);
+        }
+      } catch (logErr) {
+        console.log("logActivity exception:", logErr.message);
       }
 
       alert("Defect submitted!");
