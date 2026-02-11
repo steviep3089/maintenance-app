@@ -21,6 +21,7 @@ const STATUS_COLORS = {
 
 export default function DefectListScreen({ navigation }) {
   const [defects, setDefects] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("active");
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -35,6 +36,13 @@ export default function DefectListScreen({ navigation }) {
 
     if (!error) setDefects(data);
   }
+
+  const filteredDefects = defects.filter((item) => {
+    const status = item.status || "Reported";
+    const isActive =
+      status === "Reported" || status === "In Progress" || status === "Open";
+    return statusFilter === "active" ? isActive : status === "Completed";
+  });
 
   function renderItem({ item }) {
     const status = item.status || "Reported";
@@ -72,8 +80,42 @@ export default function DefectListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.filters}>
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            statusFilter === "active" && styles.filterChipActive,
+          ]}
+          onPress={() => setStatusFilter("active")}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              statusFilter === "active" && styles.filterTextActive,
+            ]}
+          >
+            In Progress / Reported
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            statusFilter === "completed" && styles.filterChipActive,
+          ]}
+          onPress={() => setStatusFilter("completed")}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              statusFilter === "completed" && styles.filterTextActive,
+            ]}
+          >
+            Completed
+          </Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
-        data={defects}
+        data={filteredDefects}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 10 }}
@@ -88,6 +130,32 @@ export default function DefectListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  filters: {
+    flexDirection: "row",
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    gap: 10,
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#f7f7f7",
+  },
+  filterChipActive: {
+    backgroundColor: "#2f855a",
+    borderColor: "#2f855a",
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#444",
+  },
+  filterTextActive: {
+    color: "white",
   },
   card: {
     padding: 15,

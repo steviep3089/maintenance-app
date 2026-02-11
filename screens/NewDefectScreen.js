@@ -48,6 +48,12 @@ const PRIORITIES = [
     desc: "Repair when convenient",
     color: "#d9d9d9",
   },
+  {
+    id: "6",
+    label: "6 – Improvement / Preventative maintenance",
+    desc: "Improvement / preventative maintenance",
+    color: "#3cb371",
+  },
 ];
 
 export default function NewDefectScreen({ navigation }) {
