@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { supabase } from "../supabase";
 import { useIsFocused } from "@react-navigation/native";
+import { Picker } from "@react-native-picker/picker";
 
 // Status colours for badges
 const STATUS_COLORS = {
@@ -22,6 +23,7 @@ const STATUS_COLORS = {
 export default function DefectListScreen({ navigation }) {
   const [defects, setDefects] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -41,8 +43,24 @@ export default function DefectListScreen({ navigation }) {
     const status = item.status || "Reported";
     const isActive =
       status === "Reported" || status === "In Progress" || status === "Open";
-    return statusFilter === "active" ? isActive : status === "Completed";
+    const matchesStatus =
+      statusFilter === "active" ? isActive : status === "Completed";
+    const matchesCategory =
+      categoryFilter === "all" || (item.category || "") === categoryFilter;
+
+    return matchesStatus && matchesCategory;
   });
+
+  const categoryOptions = [
+    "all",
+    ...Array.from(
+      new Set(
+        defects
+          .map((item) => (item.category || "").trim())
+          .filter((value) => value.length > 0)
+      )
+    ).sort((a, b) => a.localeCompare(b)),
+  ];
 
   function renderItem({ item }) {
     const status = item.status || "Reported";
@@ -114,6 +132,26 @@ export default function DefectListScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.categoryFilterRow}>
+        <Text style={styles.categoryFilterLabel}>Category:</Text>
+        <View style={styles.categoryPickerWrapper}>
+          <Picker
+            selectedValue={categoryFilter}
+            onValueChange={setCategoryFilter}
+            style={styles.categoryPicker}
+          >
+            {categoryOptions.map((value) => (
+              <Picker.Item
+                key={value}
+                label={value === "all" ? "All Categories" : value}
+                value={value}
+              />
+            ))}
+          </Picker>
+        </View>
+      </View>
+
       <FlatList
         data={filteredDefects}
         renderItem={renderItem}
@@ -136,6 +174,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 10,
     gap: 10,
+  },
+  categoryFilterRow: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  categoryFilterLabel: {
+    fontSize: 13,
+    color: "#444",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  categoryPickerWrapper: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  categoryPicker: {
+    height: 48,
   },
   filterChip: {
     paddingVertical: 8,

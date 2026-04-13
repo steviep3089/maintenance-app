@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
@@ -62,8 +63,42 @@ export default function NewDefectScreen({ navigation }) {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("");
   const [category, setCategory] = useState("");
+  const [otherCategoryText, setOtherCategoryText] = useState("");
+  const [tempOtherCategoryText, setTempOtherCategoryText] = useState("");
+  const [otherCategoryModalVisible, setOtherCategoryModalVisible] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const resolvedCategory =
+    category === "Other"
+      ? `Other: ${otherCategoryText.trim()}`
+      : category;
+
+  function handleCategoryChange(value) {
+    setCategory(value);
+    if (value === "Other") {
+      setTempOtherCategoryText(otherCategoryText);
+      setOtherCategoryModalVisible(true);
+    }
+  }
+
+  function saveOtherCategory() {
+    const trimmed = tempOtherCategoryText.trim();
+    if (!trimmed) {
+      alert("Please state what category is relevant to this Defect / Improvement.");
+      return;
+    }
+
+    setOtherCategoryText(trimmed);
+    setOtherCategoryModalVisible(false);
+  }
+
+  function cancelOtherCategory() {
+    setOtherCategoryModalVisible(false);
+    if (!otherCategoryText.trim()) {
+      setCategory("");
+    }
+  }
 
   // PICK FROM GALLERY
   async function pickPhoto() {
@@ -150,6 +185,9 @@ export default function NewDefectScreen({ navigation }) {
     if (!description.trim()) return alert("Please enter a description.");
     if (!priority) return alert("Please select a priority.");
     if (!category) return alert("Please select a category.");
+    if (category === "Other" && !otherCategoryText.trim()) {
+      return alert("Please state what category is relevant to this Defect / Improvement.");
+    }
 
     setSubmitting(true);
 
@@ -167,7 +205,7 @@ export default function NewDefectScreen({ navigation }) {
             title,
             description,
             priority: Number(priority),
-            category,
+            category: resolvedCategory,
             submitted_by: user?.email ?? "Unknown",
             created_by: user?.id ?? null,
             status: "Reported", // always red to start
@@ -201,7 +239,7 @@ export default function NewDefectScreen({ navigation }) {
           `New defect created`,
           `Status set to "Reported"`,
           `Priority set to "${priority}"`,
-          `Category set to "${category}"`,
+          `Category set to "${resolvedCategory}"`,
         ];
         if (uploadedUrls.length > 0) {
           detailParts.push(
@@ -304,13 +342,30 @@ export default function NewDefectScreen({ navigation }) {
         {/* CATEGORY PICKER */}
         <Text style={styles.label}>Select Defect Category:</Text>
         <View style={styles.pickerWrapperFixed}>
-          <Picker selectedValue={category} onValueChange={setCategory}>
+          <Picker selectedValue={category} onValueChange={handleCategoryChange}>
             <Picker.Item label="-- Select Category --" value="" />
             <Picker.Item label="Health and Safety" value="Health and Safety" />
             <Picker.Item label="Environmental" value="Environmental" />
             <Picker.Item label="Quality" value="Quality" />
+            <Picker.Item label="Other" value="Other" />
           </Picker>
         </View>
+
+        {category === "Other" && otherCategoryText.trim() ? (
+          <View style={styles.otherCategorySummaryRow}>
+            <Text style={styles.otherCategorySummaryText}>
+              Other category: {otherCategoryText}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setTempOtherCategoryText(otherCategoryText);
+                setOtherCategoryModalVisible(true);
+              }}
+            >
+              <Text style={styles.otherCategoryEditText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* PHOTO BUTTONS */}
         <Text style={styles.label}>Photos:</Text>
@@ -349,6 +404,43 @@ export default function NewDefectScreen({ navigation }) {
         ) : (
           <Button title="Submit Defect" onPress={submitDefect} disabled={submitting} />
         )}
+
+        <Modal
+          visible={otherCategoryModalVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={cancelOtherCategory}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Other Category</Text>
+              <Text style={styles.modalMessage}>
+                Please state what category is relevant to this Defect / Improvement.
+              </Text>
+              <TextInput
+                value={tempOtherCategoryText}
+                onChangeText={setTempOtherCategoryText}
+                placeholder="Enter category"
+                style={styles.modalInput}
+                autoFocus
+              />
+              <View style={styles.modalButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                  onPress={cancelOtherCategory}
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalSaveButton]}
+                  onPress={saveOtherCategory}
+                >
+                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -398,6 +490,24 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     overflow: "hidden", // REQUIRED TO FIX PICKER TOUCHES
   },
+  otherCategorySummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: -4,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  otherCategorySummaryText: {
+    color: "#444",
+    fontSize: 14,
+    flex: 1,
+    marginRight: 8,
+  },
+  otherCategoryEditText: {
+    color: "#007aff",
+    fontWeight: "600",
+  },
 
   input: {
     padding: 12,
@@ -416,6 +526,62 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 12,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 14,
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  modalButton: {
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalCancelButton: {
+    backgroundColor: "#eee",
+  },
+  modalSaveButton: {
+    backgroundColor: "#007aff",
+  },
+  modalCancelButtonText: {
+    color: "#333",
+    fontWeight: "600",
+  },
+  modalSaveButtonText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 
   priorityCard: {
