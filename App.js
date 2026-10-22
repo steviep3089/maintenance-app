@@ -58,6 +58,23 @@ export default function App() {
     
     checkInitialURL();
 
+    // Handle links tapped while the app is already running
+    const urlSub = Linking.addEventListener('url', async ({ url }) => {
+      const fragment = url?.split('#')[1] || url?.split('?')[1] || '';
+      const params = new URLSearchParams(fragment);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (!accessToken || !refreshToken) return;
+
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (!error && navigationRef.current?.isReady()) {
+        navigationRef.current.navigate('ResetPassword');
+      }
+    });
+
     // Listen for deep link auth events
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event);
@@ -93,6 +110,7 @@ export default function App() {
 
     return () => {
       data.subscription.unsubscribe();
+      urlSub.remove();
     };
   }, []);
 

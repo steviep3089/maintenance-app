@@ -12,7 +12,9 @@ import {
 } from "react-native";
 import { supabase } from "../supabase";
 
-export default function ResetPasswordScreen({ navigation }) {
+export default function ResetPasswordScreen({ navigation, route }) {
+  const codeEmail = route?.params?.email;
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,6 +27,12 @@ export default function ResetPasswordScreen({ navigation }) {
   }, []);
 
   async function checkSession() {
+    // Code flow: the user types the emailed code instead of using a link
+    if (codeEmail) {
+      setLoading(false);
+      return;
+    }
+
     // Splash screen already waited, just verify session exists
     const { data: { session } } = await supabase.auth.getSession();
     console.log('ResetPassword session check:', session);
@@ -53,6 +61,25 @@ export default function ResetPasswordScreen({ navigation }) {
       return;
     }
 
+    if (codeEmail) {
+      if (!code.trim()) {
+        Alert.alert("Error", "Please enter the code from your email");
+        return;
+      }
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: codeEmail,
+        token: code.trim(),
+        type: "recovery",
+      });
+      if (otpError) {
+        Alert.alert(
+          "Invalid code",
+          "That code is incorrect or has expired. Please request a new one."
+        );
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({
       password,
       data: { password_set: true, invited: false },
@@ -79,7 +106,7 @@ export default function ResetPasswordScreen({ navigation }) {
     );
   }
 
-  if (!sessionReady) {
+  if (!sessionReady && !codeEmail) {
     return null;
   }
 
@@ -87,6 +114,17 @@ export default function ResetPasswordScreen({ navigation }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.container}>
         <Text style={styles.title}>Reset Password</Text>
+
+        {codeEmail ? (
+          <TextInput
+            placeholder="Code from email"
+            keyboardType="number-pad"
+            maxLength={10}
+            value={code}
+            onChangeText={setCode}
+            style={styles.input}
+          />
+        ) : null}
 
         <View style={styles.passwordRow}>
           <TextInput

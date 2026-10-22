@@ -128,7 +128,8 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const cleanEmail = email.trim();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: "maintenanceapp://",
     });
 
@@ -137,17 +138,13 @@ export default function LoginScreen({ navigation }) {
     } else {
       Alert.alert(
         "Email Sent",
-        "Password reset email sent. Check your email and click the link. The app will now close.",
+        "We've emailed you a verification code. Enter it on the next screen to set a new password.",
         [
           {
             text: "OK",
-            onPress: () => {
-              // Close the app so it starts fresh when email link is clicked
-              if (Platform.OS === 'android') {
-                BackHandler.exitApp();
-              }
-            }
-          }
+            onPress: () =>
+              navigation.navigate("ResetPassword", { email: cleanEmail }),
+          },
         ]
       );
     }
