@@ -16,7 +16,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../supabase";
-import { fetchUserRegions } from "../userRegions";
+import { fetchUserRegions, divisionColor } from "../userRegions";
 
 // PRIORITY DEFINITIONS
 const PRIORITIES = [
@@ -337,17 +337,31 @@ export default function NewDefectScreen({ navigation }) {
             You are not assigned to any divisions. Please contact an administrator.
           </Text>
         ) : (
-          <View style={styles.pickerWrapper}>
-            <Picker selectedValue={regionId} onValueChange={setRegionId}>
-              <Picker.Item label="-- Select Division --" value="" />
-              {regions.map((region) => (
-                <Picker.Item
+          <View style={styles.divisionTabs}>
+            {regions.map((region) => {
+              const color = divisionColor(region.id);
+              const selected = regionId === region.id;
+              return (
+                <TouchableOpacity
                   key={region.id}
-                  label={region.name}
-                  value={region.id}
-                />
-              ))}
-            </Picker>
+                  onPress={() => setRegionId(region.id)}
+                  style={[
+                    styles.divisionTab,
+                    { borderColor: color },
+                    selected && { backgroundColor: color },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.divisionTabText,
+                      { color: selected ? "#fff" : color },
+                    ]}
+                  >
+                    {region.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
@@ -516,6 +530,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     marginBottom: 15,
+  },
+
+  divisionTabs: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 15,
+  },
+  divisionTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    borderWidth: 2,
+    backgroundColor: "#fff",
+  },
+  divisionTabText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   noRegionText: {

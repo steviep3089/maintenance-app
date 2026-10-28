@@ -3,13 +3,13 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import { supabase } from "../supabase";
 import { useIsFocused } from "@react-navigation/native";
-import { Picker } from "@react-native-picker/picker";
-import { fetchUserRegions } from "../userRegions";
+import { fetchUserScope, divisionColor } from "../userRegions";
 
 // Status colours for badges
 const STATUS_COLORS = {
@@ -26,6 +26,7 @@ export default function DefectListScreen({ navigation }) {
   const [statusFilter, setStatusFilter] = useState("active");
   const [regionFilter, setRegionFilter] = useState("all");
   const [regions, setRegions] = useState([]);
+  const [assetDivisions, setAssetDivisions] = useState({});
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -33,25 +34,47 @@ export default function DefectListScreen({ navigation }) {
   }, [isFocused]); // reload list whenever screen becomes active
 
   async function loadDefects() {
-    const userRegions = await fetchUserRegions();
-    setRegions(userRegions);
+    const scope = await fetchUserScope();
+    setRegions(scope.divisions);
+    setAssetDivisions(scope.assetDivisionIdsByCode);
 
-    // Users only see defects for the regions they are assigned to.
-    if (userRegions.length === 0) {
+    // Users only see defects for the divisions they are assigned to, either
+    // directly or through the asset the defect was raised against.
+    if (scope.divisions.length === 0) {
       setDefects([]);
       return;
     }
 
-    const { data, error } = await supabase
-      .from("defects")
-      .select("*")
-      .in(
-        "division_id",
-        userRegions.map((region) => region.id)
-      )
-      .order("created_at", { ascending: false });
+    const assetCodes = Object.keys(scope.assetDivisionIdsByCode);
+    const [byDivision, byAsset] = await Promise.all([
+      supabase
+        .from("defects")
+        .select("*")
+        .in(
+          "division_id",
+          scope.divisions.map((division) => division.id)
+        ),
+      assetCodes.length
+        ? supabase.from("defects").select("*").in("asset", assetCodes)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
 
-    if (!error) setDefects(data);
+    if (byDivision.error) return;
+
+    const merged = new Map();
+    [...(byDivision.data || []), ...(byAsset.data || [])].forEach((defect) =>
+      merged.set(defect.id, defect)
+    );
+    setDefects(
+      [...merged.values()].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      )
+    );
+  }
+
+  function defectDivisionIds(item) {
+    if (item.division_id) return [item.division_id];
+    return assetDivisions[item.asset] || [];
   }
 
   const filteredDefects = defects.filter((item) => {
@@ -61,7 +84,7 @@ export default function DefectListScreen({ navigation }) {
     const matchesStatus =
       statusFilter === "active" ? isActive : status === "Completed";
     const matchesRegion =
-      regionFilter === "all" || item.division_id === regionFilter;
+      regionFilter === "all" || defectDivisionIds(item).includes(regionFilter);
 
     return matchesStatus && matchesRegion;
   });
@@ -91,11 +114,16 @@ export default function DefectListScreen({ navigation }) {
         <Text style={styles.title}>{item.title}</Text>
 
         {/* Division */}
-        {regionNames[item.division_id] ? (
-          <Text style={styles.category}>
-            Division: {regionNames[item.division_id]}
-          </Text>
-        ) : null}
+        {defectDivisionIds(item).map((id) =>
+          regionNames[id] ? (
+            <View
+              key={id}
+              style={[styles.divisionTag, { backgroundColor: divisionColor(id) }]}
+            >
+              <Text style={styles.divisionTagText}>{regionNames[id]}</Text>
+            </View>
+          ) : null
+        )}
 
         {/* Category */}
         <Text style={styles.category}>Category: {item.category}</Text>
@@ -148,24 +176,43 @@ export default function DefectListScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.categoryFilterRow}>
-        <Text style={styles.categoryFilterLabel}>Division:</Text>
-        <View style={styles.categoryPickerWrapper}>
-          <Picker
-            selectedValue={regionFilter}
-            onValueChange={setRegionFilter}
-            style={styles.categoryPicker}
-          >
-            <Picker.Item label="All My Divisions" value="all" />
-            {regions.map((region) => (
-              <Picker.Item
-                key={region.id}
-                label={region.name}
-                value={region.id}
-              />
-            ))}
-          </Picker>
-        </View>
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.divisionTabs}
+        >
+          {[{ id: "all", name: "All" }, ...regions].map((division) => {
+            const color =
+              division.id === "all" ? "#333" : divisionColor(division.id);
+            const selected = regionFilter === division.id;
+            return (
+              <TouchableOpacity
+                key={division.id}
+                onPress={() => setRegionFilter(division.id)}
+                style={[
+                  styles.divisionTab,
+                  { borderColor: color },
+                  selected && { backgroundColor: color },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.divisionTabText,
+                    { color: selected ? "#fff" : color },
+                  ]}
+                >
+                  {division.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        {regions.length === 0 ? (
+          <Text style={styles.noDivisionText}>
+            You are not assigned to any divisions. Please contact an administrator.
+          </Text>
+        ) : null}
       </View>
 
       <FlatList
@@ -210,6 +257,39 @@ const styles = StyleSheet.create({
   },
   categoryPicker: {
     height: 48,
+  },
+  divisionTabs: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    gap: 8,
+  },
+  divisionTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    borderWidth: 2,
+    backgroundColor: "#fff",
+  },
+  divisionTabText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  noDivisionText: {
+    color: "#b00020",
+    paddingHorizontal: 10,
+    paddingTop: 8,
+  },
+  divisionTag: {
+    alignSelf: "flex-start",
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  divisionTagText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "700",
   },
   filterChip: {
     paddingVertical: 8,
