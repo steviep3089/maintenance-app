@@ -9,6 +9,7 @@ import {
 import { supabase } from "../supabase";
 import { useIsFocused } from "@react-navigation/native";
 import { Picker } from "@react-native-picker/picker";
+import { fetchUserRegions } from "../userRegions";
 
 // Status colours for badges
 const STATUS_COLORS = {
@@ -23,17 +24,31 @@ const STATUS_COLORS = {
 export default function DefectListScreen({ navigation }) {
   const [defects, setDefects] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [regions, setRegions] = useState([]);
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    loadDefects();
+    if (isFocused) loadDefects();
   }, [isFocused]); // reload list whenever screen becomes active
 
   async function loadDefects() {
+    const userRegions = await fetchUserRegions();
+    setRegions(userRegions);
+
+    // Users only see defects for the regions they are assigned to.
+    if (userRegions.length === 0) {
+      setDefects([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("defects")
       .select("*")
+      .in(
+        "division_id",
+        userRegions.map((region) => region.id)
+      )
       .order("created_at", { ascending: false });
 
     if (!error) setDefects(data);
@@ -45,22 +60,15 @@ export default function DefectListScreen({ navigation }) {
       status === "Reported" || status === "In Progress" || status === "Open";
     const matchesStatus =
       statusFilter === "active" ? isActive : status === "Completed";
-    const matchesCategory =
-      categoryFilter === "all" || (item.category || "") === categoryFilter;
+    const matchesRegion =
+      regionFilter === "all" || item.division_id === regionFilter;
 
-    return matchesStatus && matchesCategory;
+    return matchesStatus && matchesRegion;
   });
 
-  const categoryOptions = [
-    "all",
-    ...Array.from(
-      new Set(
-        defects
-          .map((item) => (item.category || "").trim())
-          .filter((value) => value.length > 0)
-      )
-    ).sort((a, b) => a.localeCompare(b)),
-  ];
+  const regionNames = Object.fromEntries(
+    regions.map((region) => [region.id, region.name])
+  );
 
   function renderItem({ item }) {
     const status = item.status || "Reported";
@@ -81,6 +89,13 @@ export default function DefectListScreen({ navigation }) {
         </View>
 
         <Text style={styles.title}>{item.title}</Text>
+
+        {/* Division */}
+        {regionNames[item.division_id] ? (
+          <Text style={styles.category}>
+            Division: {regionNames[item.division_id]}
+          </Text>
+        ) : null}
 
         {/* Category */}
         <Text style={styles.category}>Category: {item.category}</Text>
@@ -134,18 +149,19 @@ export default function DefectListScreen({ navigation }) {
       </View>
 
       <View style={styles.categoryFilterRow}>
-        <Text style={styles.categoryFilterLabel}>Category:</Text>
+        <Text style={styles.categoryFilterLabel}>Division:</Text>
         <View style={styles.categoryPickerWrapper}>
           <Picker
-            selectedValue={categoryFilter}
-            onValueChange={setCategoryFilter}
+            selectedValue={regionFilter}
+            onValueChange={setRegionFilter}
             style={styles.categoryPicker}
           >
-            {categoryOptions.map((value) => (
+            <Picker.Item label="All My Divisions" value="all" />
+            {regions.map((region) => (
               <Picker.Item
-                key={value}
-                label={value === "all" ? "All Categories" : value}
-                value={value}
+                key={region.id}
+                label={region.name}
+                value={region.id}
               />
             ))}
           </Picker>

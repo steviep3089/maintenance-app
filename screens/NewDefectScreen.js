@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../supabase";
+import { fetchUserRegions } from "../userRegions";
 
 // PRIORITY DEFINITIONS
 const PRIORITIES = [
@@ -62,6 +63,9 @@ export default function NewDefectScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("");
+  const [regions, setRegions] = useState([]);
+  const [regionsLoaded, setRegionsLoaded] = useState(false);
+  const [regionId, setRegionId] = useState("");
   const [category, setCategory] = useState("");
   const [otherCategoryText, setOtherCategoryText] = useState("");
   const [tempOtherCategoryText, setTempOtherCategoryText] = useState("");
@@ -73,6 +77,14 @@ export default function NewDefectScreen({ navigation }) {
     category === "Other"
       ? `Other: ${otherCategoryText.trim()}`
       : category;
+
+  useEffect(() => {
+    fetchUserRegions().then((userRegions) => {
+      setRegions(userRegions);
+      if (userRegions.length === 1) setRegionId(userRegions[0].id);
+      setRegionsLoaded(true);
+    });
+  }, []);
 
   function handleCategoryChange(value) {
     setCategory(value);
@@ -181,6 +193,7 @@ export default function NewDefectScreen({ navigation }) {
     if (submitting) return; // Prevent duplicate submissions
     
     if (!asset) return alert("Please select an asset.");
+    if (!regionId) return alert("Please select a division.");
     if (!title.trim()) return alert("Please enter a title.");
     if (!description.trim()) return alert("Please enter a description.");
     if (!priority) return alert("Please select a priority.");
@@ -205,6 +218,7 @@ export default function NewDefectScreen({ navigation }) {
             title,
             description,
             priority: Number(priority),
+            division_id: regionId,
             category: resolvedCategory,
             submitted_by: user?.email ?? "Unknown",
             created_by: user?.id ?? null,
@@ -238,6 +252,7 @@ export default function NewDefectScreen({ navigation }) {
         const detailParts = [
           `New defect created`,
           `Status set to "Reported"`,
+          `Division set to "${regions.find((r) => r.id === regionId)?.name || ""}"`,
           `Priority set to "${priority}"`,
           `Category set to "${resolvedCategory}"`,
         ];
@@ -314,6 +329,27 @@ export default function NewDefectScreen({ navigation }) {
           style={styles.textarea}
           multiline
         />
+
+        {/* DIVISION PICKER (only divisions assigned to this user) */}
+        <Text style={styles.label}>Select Division:</Text>
+        {regionsLoaded && regions.length === 0 ? (
+          <Text style={styles.noRegionText}>
+            You are not assigned to any divisions. Please contact an administrator.
+          </Text>
+        ) : (
+          <View style={styles.pickerWrapper}>
+            <Picker selectedValue={regionId} onValueChange={setRegionId}>
+              <Picker.Item label="-- Select Division --" value="" />
+              {regions.map((region) => (
+                <Picker.Item
+                  key={region.id}
+                  label={region.name}
+                  value={region.id}
+                />
+              ))}
+            </Picker>
+          </View>
+        )}
 
         {/* PRIORITY */}
         <Text style={styles.label}>Select Priority:</Text>
@@ -479,6 +515,11 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     backgroundColor: "#fff",
     borderRadius: 8,
+    marginBottom: 15,
+  },
+
+  noRegionText: {
+    color: "#b00020",
     marginBottom: 15,
   },
 
