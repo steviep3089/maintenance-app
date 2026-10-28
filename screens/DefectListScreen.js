@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ActivityIndicator,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -27,6 +28,7 @@ export default function DefectListScreen({ navigation }) {
   const [regionFilter, setRegionFilter] = useState("all");
   const [regions, setRegions] = useState([]);
   const [assetDivisions, setAssetDivisions] = useState({});
+  const [loading, setLoading] = useState(true);
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -34,6 +36,14 @@ export default function DefectListScreen({ navigation }) {
   }, [isFocused]); // reload list whenever screen becomes active
 
   async function loadDefects() {
+    try {
+      await fetchAndSetDefects();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchAndSetDefects() {
     const scope = await fetchUserScope();
     setRegions(scope.divisions);
     setAssetDivisions(scope.assetDivisionIdsByCode);
@@ -208,19 +218,27 @@ export default function DefectListScreen({ navigation }) {
             );
           })}
         </ScrollView>
-        {regions.length === 0 ? (
+        {!loading && regions.length === 0 ? (
           <Text style={styles.noDivisionText}>
             You are not assigned to any divisions. Please contact an administrator.
           </Text>
         ) : null}
       </View>
 
-      <FlatList
-        data={filteredDefects}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 10 }}
-      />
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#2f855a"
+          style={styles.loadingIndicator}
+        />
+      ) : (
+        <FlatList
+          data={filteredDefects}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 10 }}
+        />
+      )}
     </View>
   );
 }
@@ -257,6 +275,9 @@ const styles = StyleSheet.create({
   },
   categoryPicker: {
     height: 48,
+  },
+  loadingIndicator: {
+    marginTop: 40,
   },
   divisionTabs: {
     paddingHorizontal: 10,

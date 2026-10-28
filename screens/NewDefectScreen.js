@@ -332,7 +332,9 @@ export default function NewDefectScreen({ navigation }) {
 
         {/* DIVISION PICKER (only divisions assigned to this user) */}
         <Text style={styles.label}>Select Division:</Text>
-        {regionsLoaded && regions.length === 0 ? (
+        {!regionsLoaded ? (
+          <ActivityIndicator color="#007aff" style={styles.divisionLoading} />
+        ) : regions.length === 0 ? (
           <Text style={styles.noRegionText}>
             You are not assigned to any divisions. Please contact an administrator.
           </Text>
@@ -550,6 +552,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  divisionLoading: {
+    alignSelf: "flex-start",
+    marginBottom: 15,
+  },
   noRegionText: {
     color: "#b00020",
     marginBottom: 15,
