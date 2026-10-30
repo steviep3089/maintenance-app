@@ -1,6 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://zebksrihswwwlejdiboq.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplYmtzcmloc3d3d2xlamRpYm9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyODY2MDAsImV4cCI6MjA4MDg2MjYwMH0.yBjz_NXvkpiKNH-eYvzPrHuEEqXyVCRdx1FX-L3gBvE";
+// Expo only inlines EXPO_PUBLIC_ variables when referenced directly like this.
+const SUPABASE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Mobile bundles are public: only a publishable key (sb_publishable_...) may be used here.
+if (!SUPABASE_PUBLISHABLE_KEY || !SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_')) {
+  throw new Error(
+    'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY must be set to a Supabase publishable key (sb_publishable_...).'
+  );
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
