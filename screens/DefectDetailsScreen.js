@@ -227,13 +227,24 @@ export default function DefectDetailsScreen({ route, navigation }) {
       closed_out: closedOut,
     };
 
-    const { error } = await supabase
+    const { data: savedRows, error } = await supabase
       .from("defects")
       .update(updates)
-      .eq("id", currentDefect.id);
+      .eq("id", currentDefect.id)
+      .select("id");
 
     if (error) {
       Alert.alert("Error", error.message);
+      setLoading(false);
+      return;
+    }
+
+    // Row-level security filters blocked updates to zero rows without an error (e.g. during maintenance).
+    if (!savedRows || savedRows.length === 0) {
+      Alert.alert(
+        "Not saved",
+        "Your changes could not be saved. The system may be in maintenance mode. Please try again later."
+      );
       setLoading(false);
       return;
     }

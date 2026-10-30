@@ -241,10 +241,18 @@ export default function NewDefectScreen({ navigation }) {
       if (photos.length > 0) {
         uploadedUrls = await uploadPhotos(defectId);
 
-        await supabase
+        const { data: photoRows, error: photoError } = await supabase
           .from("defects")
           .update({ photo_urls: uploadedUrls })
-          .eq("id", defectId);
+          .eq("id", defectId)
+          .select("id");
+
+        // RLS filters a blocked update to zero rows without an error (e.g. maintenance started mid-upload).
+        if (photoError || !photoRows || photoRows.length === 0) {
+          alert(
+            "Your defect was submitted, but its photos could not be attached. Please open the defect and add them again."
+          );
+        }
       }
 
       // 3. LOG ACTIVITY

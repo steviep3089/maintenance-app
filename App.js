@@ -13,6 +13,7 @@ import HomeScreen from "./screens/HomeScreen";
 import NewDefectScreen from "./screens/NewDefectScreen";
 import DefectListScreen from "./screens/DefectListScreen";
 import DefectDetailsScreen from "./screens/DefectDetailsScreen";
+import MaintenanceGate from "./MaintenanceGate";
 
 const Stack = createNativeStackNavigator();
 
@@ -115,6 +116,7 @@ export default function App() {
   }, []);
 
   return (
+    <MaintenanceGate>
     <NavigationContainer 
       ref={navigationRef} 
       linking={linking}
@@ -176,5 +178,6 @@ export default function App() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+    </MaintenanceGate>
   );
 }
